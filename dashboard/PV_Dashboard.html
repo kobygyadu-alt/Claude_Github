@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PFAFR PV Dashboard — Proforest Limited, Accra</title>
+<style>
+  :root {
+    --pf-turquoise: #318E93;
+    --pf-teal-mark: #00A6AB;   /* validated data hue (slot 1) */
+    --pf-orange:   #D38348;    /* validated slot 2 */
+    --pf-blue:     #2961A3;    /* validated slot 3 */
+    --pf-tint-20:  #CCE5E5;
+    --pf-tint-10:  #EDF5F5;
+    --ok:   #007361;           /* status: on track  */
+    --warn: #DABA38;           /* status: watch     */
+    --bad:  #A3352F;           /* status: over/rejected */
+    --ink:  #404040;
+    --ink-2:#4B565E;
+    --muted:#77848B;
+    --grid: #E3ECEC;
+    --line: #DCE7E7;
+    --card: #FFFFFF;
+    --bg:   #F4F9F9;
+    --de:   #C7D2D2;           /* de-emphasis mark gray */
+    --font: 'Aptos','Aptos Display','Segoe UI',Calibri,sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: var(--font); color: var(--ink); background: var(--bg);
+         font-size: 14px; line-height: 1.5; }
+
+  /* brand watermark */
+  #watermark { position: fixed; inset: 0; display: flex; align-items: center;
+    justify-content: center; opacity: .05; pointer-events: none; z-index: 0; }
+  #watermark span { font-size: 9vw; font-weight: 800; color: var(--pf-turquoise);
+    letter-spacing: -.03em; }
+
+  .shell { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto;
+           padding: 20px 24px 48px; }
+
+  /* header */
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+    padding: 6px 0 14px; }
+  .logo { display: flex; flex-direction: column; }
+  .logo .word { font-weight: 800; font-size: 24px; color: var(--pf-turquoise);
+    letter-spacing: -.5px; line-height: 1; }
+  .titleblock { flex: 1 1 auto; min-width: 260px; }
+  .titleblock h1 { font-size: 21px; font-weight: 700; color: var(--pf-turquoise); }
+  .titleblock .sub { color: var(--ink-2); font-size: 13px; }
+  .asof { text-align: right; font-size: 12.5px; color: var(--muted); }
+  .asof b { color: var(--ink-2); font-weight: 600; }
+  .hero-curve { display: block; width: 100%; height: 26px; margin-bottom: 10px; }
+
+  /* filter row */
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 10px 14px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; margin-bottom: 16px; }
+  .filters label { font-size: 12px; color: var(--ink-2); font-weight: 600;
+    display: flex; align-items: center; gap: 6px; }
+  .filters select, .filters input[type=search] {
+    font: inherit; font-size: 13px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px;
+    background: #fff; }
+  .filters input[type=search] { width: 190px; }
+  .filters .spacer { flex: 1 1 auto; }
+  .btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--pf-turquoise);
+    background: var(--pf-tint-10); border: 1px solid var(--pf-tint-20);
+    border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  .btn:hover { background: var(--pf-tint-20); }
+  .hint { font-size: 11.5px; color: var(--muted); }
+
+  /* KPI row */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 13px 16px 12px; display: flex; justify-content: space-between; gap: 8px; }
+  .tile .label { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  .tile .value { font-size: 27px; font-weight: 650; color: var(--ink); line-height: 1.15; }
+  .tile .note { font-size: 11.5px; color: var(--muted); }
+  .tile .note .up { color: var(--ok); font-weight: 600; }
+  .tile .note .down { color: var(--bad); font-weight: 600; }
+  .tile svg.spark { align-self: flex-end; }
+
+  /* cards grid */
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px 12px; grid-column: span 6; min-width: 0; }
+  .card.w4 { grid-column: span 4; } .card.w8 { grid-column: span 8; }
+  .card.w12 { grid-column: span 12; }
+  @media (max-width: 900px) { .card, .card.w4, .card.w8 { grid-column: span 12; }
+    .asof { text-align: left; } }
+  .card h2 { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+  .card .cardsub { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .cardhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .tbl-toggle { font: inherit; font-size: 11.5px; color: var(--pf-turquoise);
+    background: none; border: none; cursor: pointer; padding: 2px 4px; font-weight: 600; }
+  .tbl-toggle:hover { text-decoration: underline; }
+  .chartbox { overflow-x: auto; }
+  .chartbox svg { display: block; width: 100%; height: auto; }
+  .empty { color: var(--muted); font-size: 13px; padding: 24px 4px; text-align: center; }
+
+  /* tables */
+  table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.data th { text-align: left; font-size: 11.5px; color: var(--ink-2);
+    font-weight: 700; border-bottom: 1px solid var(--line); padding: 6px 8px;
+    white-space: nowrap; }
+  table.data td { padding: 6px 8px; border-bottom: 1px solid var(--grid);
+    vertical-align: top; }
+  table.data td.num, table.data th.num { text-align: right;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data tfoot td { border-top: 1px solid var(--line); border-bottom: none;
+    font-weight: 700; }
+  .scrollwrap { overflow-x: auto; }
+  .register-wrap { max-height: 430px; overflow-y: auto; }
+  .register-wrap thead th { position: sticky; top: 0; background: var(--card); z-index: 2; }
+
+  /* chips */
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px;
+    font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .chip .dot { font-size: 10px; line-height: 1; }
+  .chip.ok   { background: #E2F0ED; color: #00493E; }
+  .chip.ok .dot { color: var(--ok); }
+  .chip.warn { background: #F8F0D4; color: #5c4a06; }
+  .chip.warn .dot { color: #A98F14; }
+  .chip.bad  { background: #F5E3E2; color: #6E1F1B; }
+  .chip.bad .dot { color: var(--bad); }
+  .chip.na   { background: var(--pf-tint-10); color: var(--ink-2); }
+
+  /* meter */
+  .meter { position: relative; height: 8px; border-radius: 4px; background: var(--pf-tint-20);
+    min-width: 70px; overflow: hidden; }
+  .meter i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+
+  /* status strip */
+  .statuschips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .stackbar { display: flex; gap: 2px; height: 18px; border-radius: 5px; overflow: hidden; }
+  .stackbar div { min-width: 3px; }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px;
+    color: var(--ink-2); margin-top: 8px; }
+  .legend .key { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* tooltip */
+  #tip { position: fixed; z-index: 50; background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 11px; font-size: 12px; color: var(--ink-2);
+    box-shadow: 0 4px 14px rgba(49,142,147,.16); pointer-events: none; display: none;
+    max-width: 300px; }
+  #tip .v { font-size: 14px; font-weight: 700; color: var(--ink); }
+
+  /* svg text */
+  text { font-family: var(--font); }
+  .axis-t { font-size: 10.5px; fill: var(--muted); }
+  .val-t  { font-size: 11px; font-weight: 600; fill: var(--ink-2); }
+  .bar-label { font-size: 11.5px; fill: var(--ink-2); }
+  rect.mark, path.mark { cursor: pointer; outline: none; }
+  path.mark:focus-visible, rect.mark:focus-visible { stroke: var(--pf-blue); stroke-width: 2; }
+
+  /* drag-drop */
+  body.dragging::after { content: "Drop the Dashboard Extract CSV to load it";
+    position: fixed; inset: 0; z-index: 90; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; font-weight: 700; color: var(--pf-turquoise);
+    background: rgba(237,245,245,.94); border: 3px dashed var(--pf-turquoise); }
+  .loading .card, .loading .tile { opacity: .45; }
+
+  footer { margin-top: 22px; font-size: 12px; color: var(--muted); }
+  footer details { margin-top: 8px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 14px; color: var(--ink-2); }
+  footer summary { cursor: pointer; font-weight: 600; color: var(--pf-turquoise); }
+  footer ol { margin: 8px 0 4px 20px; }
+  footer code { background: var(--pf-tint-10); border-radius: 4px; padding: 0 5px;
+    font-size: 11.5px; }
+
+  @media print {
+    body { background: #fff; }
+    .filters, .tbl-toggle, footer details, .btn, .hint { display: none !important; }
+    .card, .tile { border-color: #bbb; break-inside: avoid; }
+    .register-wrap { max-height: none; overflow: visible; }
+  }
+</style>
+</head>
+<body>
+<div id="watermark" aria-hidden="true"><span>proforest</span></div>
+<div class="shell">
+
+  <header class="top">
+    <div class="logo">
+      <span class="word">proforest</span>
+      <svg width="118" height="9" viewBox="0 0 118 9" aria-hidden="true">
+        <path d="M0,7 Q59,0 118,5" stroke="#318E93" stroke-width="1.6" fill="none"/>
+      </svg>
+    </div>
+    <div class="titleblock">
+      <h1>Payment Voucher Dashboard</h1>
+      <div class="sub">Proforest Limited, Accra (PFAFR) · management reporting</div>
+    </div>
+    <div class="asof">
+      <div><b id="asof-period">—</b></div>
+      <div id="asof-src">—</div>
+    </div>
+  </header>
+  <svg class="hero-curve" viewBox="0 0 1200 26" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,22 Q600,2 1200,16" stroke="#318E93" stroke-width="1.5" fill="none" opacity="0.4"/>
+  </svg>
+
+  <div class="filters" id="filters">
+    <label>Financial year <select id="f-fy"></select></label>
+    <label>Month <select id="f-month"></select></label>
+    <label>Status <select id="f-status">
+      <option value="">All</option><option>Approved</option>
+      <option>Pending</option><option>Rejected</option></select></label>
+    <label>Search <input type="search" id="f-q" placeholder="payee, PV no, description"></label>
+    <span class="spacer"></span>
+    <button class="btn" id="load-btn" type="button">Load data (CSV)</button>
+    <input type="file" id="load-input" accept=".csv,text/csv" hidden>
+    <span class="hint">or drag the exported 📤 Dashboard Extract CSV anywhere on this page</span>
+  </div>
+
+  <section class="kpis" id="kpis" aria-label="Key figures"></section>
+
+  <div class="grid">
+    <div class="card w8">
+      <div class="cardhead"><h2>Gross spend by month (GHS)</h2>
+        <button class="tbl-toggle" data-for="c-month" type="button">⊞ table</button></div>
+      <div class="cardsub" id="c-month-sub"></div>
+      <div class="chartbox" id="c-month"></div>
+    </div>
+
+    <div class="card w4">
+      <div class="cardhead"><h2>Approval status</h2></div>
+      <div class="cardsub">Share of gross GHS in the current slice</div>
+      <div id="c-status"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>Spend by classification (GHS)</h2>
+        <button class="tbl-toggle" data-for="c-class" type="button">⊞ table</button></div>
+      <div class="cardsub">Cost codes from the Chart of Accounts · blank codes shown as Unclassified</div>
+      <div class="chartbox" id="c-class"></div>
+    </div>
+
+    <div class="card">
+      <div class="cardhead"><h2>Top payees (GHS)</h2>
+        <button class="tbl-toggle" data-for="c-payee" type="button">⊞ table</button></div>
+      <div class="cardsub">Largest 8 by gross value in the current slice</div>
+      <div class="chartbox" id="c-payee"></div>
+    </div>
+
+    <div class="card w4">
+      <div class="cardhead"><h2>GRA filing summary (GHS)</h2></div>
+      <div class="cardsub">Withholding tax and levies computed by the register for the current slice</div>
+      <div class="scrollwrap" id="c-tax"></div>
+    </div>
+
+    <div class="card w8">
+      <div class="cardhead"><h2>Budget vs actuals — FY<span id="bva-fy"></span> (GHS)</h2></div>
+      <div class="cardsub">Annual budgets embedded from the Chart of Accounts · actuals = approved gross,
+        committed = pending · always full-FY, unaffected by the month filter</div>
+      <div class="scrollwrap" id="c-bva"></div>
+    </div>
+
+    <div class="card w12">
+      <div class="cardhead"><h2>PV register — current slice</h2></div>
+      <div class="cardsub" id="c-reg-sub"></div>
+      <div class="scrollwrap register-wrap" id="c-register"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div>Data source: the workbook's <b>📤 Dashboard Extract</b> sheet · figures are the register's own
+      computed values — this page performs no tax recalculation.</div>
+    <details>
+      <summary>How to refresh this dashboard (monthly, ~2 minutes)</summary>
+      <ol>
+        <li>Open the PV workbook → sheet <code>📤 Dashboard Extract</code>.</li>
+        <li>File → Save As (or Export) → <b>CSV UTF-8</b> → save as <code>dashboard_extract.csv</code>.
+            (Only the active sheet is exported — make sure the extract sheet is selected.)</li>
+        <li>Open this dashboard and click <b>Load data (CSV)</b> (or drag the file onto the page).</li>
+      </ol>
+      <div>Assumptions: dates are read as ISO (<code>2026-01-14</code>), day-first (<code>14/01/2026</code>)
+        or Excel serial numbers; ambiguous dates are treated day-first (Ghana locale). Financial year =
+        calendar year (⚙️ Settings: FY starts January). Loaded data stays in your browser only.</div>
+    </details>
+  </footer>
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+"use strict";
+/* ================= embedded dataset (generated from the workbook) ========= */
+const EMBEDDED = {"generated":"2026-08-17","source":"📤 Dashboard Extract (37 rows, cached values)","pvs":[{"pv_number":"PV-2026-0001","date":"2025-12-01","payee":"Afua Serwah Akoto Prempeh","description":"Cash Advance for visa application fee","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":2405,"gross_ghs":2405,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":2405,"net_payment":2405,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0002","date":"2026-01-14","payee":"Naana Nkansah Agyekum","description":"Staff loan","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":40000,"gross_ghs":40000,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":40000,"net_payment":40000,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0003","date":"2026-01-14","payee":"Social Security and National Insurance Trust","description":"Payment of staff SSNIT contribution for December 2025","classification":0,"nominal_code":"2211","nominal_name":"SSNIT 1&2 (Social Costs) Control Account","currency":"GHS","fx_rate":1,"gross_fcy":82128.86,"gross_ghs":82128.86,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":82128.86,"net_payment":82128.86,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0004","date":"2026-01-14","payee":"Ghana Revenue Authority","description":"Payment of staff income tax (PAYE) for December 2025","classification":0,"nominal_code":"2210","nominal_name":"IRS (Personal Tax) Control Account","currency":"GHS","fx_rate":1,"gross_fcy":134504.68,"gross_ghs":134504.68,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":134504.68,"net_payment":134504.68,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0005","date":"2026-01-14","payee":"Ghana Revenue Authority","description":"Payment of WHT for December 2025","classification":0,"nominal_code":"2251","nominal_name":"Withholding Tax","currency":"GHS","fx_rate":1,"gross_fcy":27402.01,"gross_ghs":27402.01,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":27402.01,"net_payment":27402.01,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0006","date":"2026-01-14","payee":"Metropolitan Pensions Trust","description":"Payment of staff Tier 3 contribution for December 2025","classification":0,"nominal_code":"2215","nominal_name":"Pension Control Account (Tier 3)","currency":"GHS","fx_rate":1,"gross_fcy":64481.72,"gross_ghs":64481.72,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":64481.72,"net_payment":64481.72,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0007","date":"2026-01-14","payee":"Axis Pensions Trust","description":"Payment of staff Tier 2 & Tier 3 contribution for December 2025","classification":0,"nominal_code":"2211","nominal_name":"SSNIT 1&2 (Social Costs) Control Account","currency":"GHS","fx_rate":1,"gross_fcy":36501.43,"gross_ghs":36501.43,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":36501.43,"net_payment":36501.43,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0008","date":"2026-01-14","payee":"Messential Groceries","description":"Purchase of Groceries items for Q1 (incl. overpayment adjustment)","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":21711,"gross_ghs":21711,"wht_type":"Goods Supply – Resident (3%)","wht_amount":651.3299999999999,"nhil":0,"getfund":0,"vat":0,"total_taxes":651.3299999999999,"total_invoice":21711,"net_payment":21059.67,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0009","date":"2026-01-14","payee":"Messential Groceries","description":"Purchase of Groceries items for Q1 (incl. overpayment adjustment)","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":54.67,"gross_ghs":54.67,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":54.67,"net_payment":54.67,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0010","date":"2026-01-14","payee":"Francis Sianyor","description":"Gardening allowance for December 2025 and January 2026","classification":"IT and Data","nominal_code":"7820","nominal_name":"Cleaning and laundry","currency":"GHS","fx_rate":1,"gross_fcy":1800,"gross_ghs":1800,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":1800,"net_payment":1800,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0011","date":"2026-01-20","payee":"Iries Cuisine - Evelyn Sogah","description":"Supply of snacks for Annual Planning meeting","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":8700,"gross_ghs":8700,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":8700,"net_payment":8700,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0012","date":"2026-01-20","payee":"Jonaya Decor","description":"Rental of table & chairs for annual planning meeting; service charge; balance on Christmas decor","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":2645,"gross_ghs":2645,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":2645,"net_payment":2645,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0013","date":"2026-01-20","payee":"Jonaya Decor","description":"Service Charge","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":1500,"gross_ghs":1500,"wht_type":"Services – Resident (7.5%)","wht_amount":112.5,"nhil":0,"getfund":0,"vat":0,"total_taxes":112.5,"total_invoice":1500,"net_payment":1387.5,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0014","date":"2026-01-20","payee":"Jonaya Decor","description":"Balance on christmas décor (Christmas light)","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":900,"gross_ghs":900,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":900,"net_payment":900,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0015","date":"2026-01-23","payee":"NextIT","description":"Net Salary for January 2026; Payroll consulting service","classification":0,"nominal_code":"2220","nominal_name":"Net Wages","currency":"GHS","fx_rate":1,"gross_fcy":391820.76,"gross_ghs":391820.76,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":391820.76,"net_payment":391820.76,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0016","date":"2026-01-23","payee":"NextIT","description":"Net Salary for January 2026; Payroll consulting service","classification":0,"nominal_code":"2220","nominal_name":"Net Wages","currency":"GHS","fx_rate":1,"gross_fcy":5000,"gross_ghs":5000,"wht_type":"Services – Resident (7.5%)","wht_amount":375,"nhil":0,"getfund":0,"vat":0,"total_taxes":375,"total_invoice":5000,"net_payment":4625,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0017","date":"2026-01-27","payee":"University of Ghana Cooperative Union","description":"Staff Contributions for January 2026","classification":0,"nominal_code":"2101","nominal_name":"Sundry Creditors","currency":"GHS","fx_rate":1,"gross_fcy":12150,"gross_ghs":12150,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":12150,"net_payment":12150,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0018","date":"2026-01-29","payee":"Ghana Revenue Authority","description":"Payment of GETFund/NHIL and COVID levy for December 2025","classification":0,"nominal_code":"2203","nominal_name":"GETFUND/NHIL","currency":"GHS","fx_rate":1,"gross_fcy":6319.94,"gross_ghs":6319.94,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":6319.94,"net_payment":6319.94,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0019","date":"2026-01-30","payee":"Satguru Travels","description":"Purchase of flight ticket for Stephen to Abidjan (PCGH775)","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":6340,"gross_ghs":6340,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":6340,"net_payment":6340,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0020","date":"2026-01-13","payee":"Jehoshaphat Mensah","description":"Purchase of fuel for Genset","classification":"Office Running costs","nominal_code":"7210","nominal_name":"Utilities and service charges","currency":"GHS","fx_rate":1,"gross_fcy":1785,"gross_ghs":1785,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":1785,"net_payment":1785,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0021","date":"2026-02-13","payee":"Ghana Revenue Authority","description":"Payment of staff income tax (PAYE) for January 2026","classification":0,"nominal_code":"2210","nominal_name":"IRS (Personal Tax) Control Account","currency":"GHS","fx_rate":1,"gross_fcy":134220.24,"gross_ghs":134220.24,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":134220.24,"net_payment":134220.24,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0022","date":"2026-02-13","payee":"Social Security and National Insurance Trust","description":"Payment of staff SSNIT contribution for January 2026","classification":0,"nominal_code":"2211","nominal_name":"SSNIT 1&2 (Social Costs) Control Account","currency":"GHS","fx_rate":1,"gross_fcy":83543.14,"gross_ghs":83543.14,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":83543.14,"net_payment":83543.14,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0023","date":"2026-02-13","payee":"Metropolitan Pensions Trust","description":"Payment of staff Tier 3 contribution for January 2026; Pension contribution for Louis Defo","classification":0,"nominal_code":"2215","nominal_name":"Pension Control Account (Tier 3)","currency":"GHS","fx_rate":1,"gross_fcy":100012.05,"gross_ghs":100012.05,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":100012.05,"net_payment":100012.05,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0024","date":"2026-02-13","payee":"Cephas Apostle","description":"Purchase of materials and labour cost for spraying of pergola chairs and tables","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":9160,"gross_ghs":9160,"wht_type":"Services – Resident (7.5%)","wht_amount":687,"nhil":0,"getfund":0,"vat":0,"total_taxes":687,"total_invoice":9160,"net_payment":8473,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0025","date":"2026-02-16","payee":"Ernestina Incoom","description":"Cash advance to pay for Hotel accommodation for Ab and Naana","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":20000,"gross_ghs":20000,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":20000,"net_payment":20000,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0026","date":"2026-02-16","payee":"City Xtra","description":"Cleaning and Janitorial Services for January","classification":"IT and Data","nominal_code":"7820","nominal_name":"Cleaning and laundry","currency":"GHS","fx_rate":1,"gross_fcy":1984.72,"gross_ghs":1984.72,"wht_type":"Services – Resident (7.5%)","wht_amount":148.85399999999998,"nhil":49.618,"getfund":49.618,"vat":297.70799999999997,"total_taxes":545.798,"total_invoice":2381.664,"net_payment":2232.8100000000004,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0027","date":"2026-02-17","payee":"Satguru Travels","description":"Flight ticket for Kwadwo to Nigeria (PCGH774); Flight ticket for Naana to Ethiopia","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":27887,"gross_ghs":27887,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":27887,"net_payment":27887,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0028","date":"2026-02-20","payee":"NextIT","description":"Net Salary for February 2026; Consulting charges; Express Payment charges","classification":0,"nominal_code":"2220","nominal_name":"Net Wages","currency":"GHS","fx_rate":1,"gross_fcy":391562.85,"gross_ghs":391562.85,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":391562.85,"net_payment":391562.85,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0029","date":"2026-02-20","payee":"NextIT","description":"Net Salary for February 2026; Consulting charges; Express Payment charges","classification":0,"nominal_code":"2220","nominal_name":"Net Wages","currency":"GHS","fx_rate":1,"gross_fcy":5000,"gross_ghs":5000,"wht_type":"Services – Resident (7.5%)","wht_amount":375,"nhil":0,"getfund":0,"vat":0,"total_taxes":375,"total_invoice":5000,"net_payment":4625,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0030","date":"2026-02-20","payee":"NextIT","description":"Net Salary for February 2026; Consulting charges; Express Payment charges","classification":0,"nominal_code":"2220","nominal_name":"Net Wages","currency":"GHS","fx_rate":1,"gross_fcy":1303,"gross_ghs":1303,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":1303,"net_payment":1303,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0031","date":"2026-02-27","payee":"University of Ghana Cooperative Union","description":"Staff Contributions for February 2026","classification":0,"nominal_code":"2101","nominal_name":"Sundry Creditors","currency":"GHS","fx_rate":1,"gross_fcy":12150,"gross_ghs":12150,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":12150,"net_payment":12150,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0032","date":"2026-02-26","payee":"Clement Obeng Manu","description":"Advance request for General Mills field trip; Payment for Field workers","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":102600,"gross_ghs":102600,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":102600,"net_payment":102600,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0033","date":"2026-02-26","payee":"Early Servicing Enterprise","description":"Labour and materials for generator servicing","classification":"Office Running costs","nominal_code":"7580","nominal_name":"Misc Office Costs","currency":"GHS","fx_rate":1,"gross_fcy":2280,"gross_ghs":2280,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":2280,"net_payment":2280,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0034","date":"2026-02-26","payee":"Nyame Adom Guest House","description":"Accommodation for staff during General Mills trip","classification":0,"nominal_code":"1200","nominal_name":"Current Account GHS ECOBANK","currency":"GHS","fx_rate":1,"gross_fcy":5400,"gross_ghs":5400,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":5400,"net_payment":5400,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0035","date":"2026-03-04","payee":"Stephen Doso","description":"Travel Advance for trip (USD 300 @10.7; USD 500 transferred)","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":8684.75,"gross_ghs":8684.75,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":8684.75,"net_payment":8684.75,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0036","date":"2026-02-28","payee":"Kwame Boakye Agyeman","description":"Advance for field boots","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":1950,"gross_ghs":1950,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":1950,"net_payment":1950,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null},{"pv_number":"PV-2026-0037","date":"2026-03-04","payee":"Naana Nkansah Agyekum","description":"Travel Advance to Ethiopia (USD 250 @10.6)","classification":0,"nominal_code":"1102","nominal_name":"Sundry Debtors","currency":"GHS","fx_rate":1,"gross_fcy":2650,"gross_ghs":2650,"wht_type":null,"wht_amount":0,"nhil":0,"getfund":0,"vat":0,"total_taxes":0,"total_invoice":2650,"net_payment":2650,"payment_method":"Electronic Transfer (ETO)","status":"Approved","prepared_by":"Tina","approved_by":null,"supporting_document":null}],"budgets":{"Direct technical costs":6390643.42,"Recruitment, Benefits":321500.0,"Direct support costs":2322680.0,"Internal events and meetings":292500.0,"Professional development and Training":1313487.71,"Office Running costs":1193750.18,"Business development and Comms":306418.75,"Professional services and governance":442670.05,"IT and Data":351287.14}};
+
+/* ================= palette (validated — see docs/03_Dashboard_Guide.md) === */
+const C = {
+  mark: "#00A6AB", de: "#C7D2D2",
+  ok: "#007361", warn: "#DABA38", bad: "#A3352F",
+  ink2: "#4B565E", muted: "#77848B", grid: "#E3ECEC"
+};
+const STATUS_META = {
+  Approved: { color: C.ok,   icon: "✓", cls: "ok"   },
+  Pending:  { color: C.warn, icon: "◔", cls: "warn" },
+  Rejected: { color: C.bad,  icon: "✕", cls: "bad"  }
+};
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ================= state ================================================== */
+let rows = [];              // normalised PV rows
+let sourceLabel = "";
+const state = { fy: null, month: "", status: "", q: "" };
+
+/* ================= helpers ================================================ */
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    if (k === "class") n.className = attrs[k];
+    else if (k === "text") n.textContent = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  for (const kid of kids) if (kid != null) n.append(kid);
+  return n;
+}
+const SVGNS = "http://www.w3.org/2000/svg";
+function sv(tag, attrs, ...kids) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in (attrs || {})) {
+    if (k === "text") n.textContent = attrs[k]; else n.setAttribute(k, attrs[k]);
+  }
+  for (const kid of kids) if (kid != null) n.append(kid);
+  return n;
+}
+function num(v) {
+  if (typeof v === "number") return isFinite(v) ? v : 0;
+  if (v == null) return 0;
+  const n = parseFloat(String(v).replace(/[,\sGH₵]/gi, ""));
+  return isFinite(n) ? n : 0;
+}
+function fmt(n, dp) {
+  return n.toLocaleString("en-GB", { minimumFractionDigits: dp ?? 0, maximumFractionDigits: dp ?? 0 });
+}
+function compact(n) {
+  const a = Math.abs(n);
+  if (a >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
+  if (a >= 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+  return fmt(Math.round(n));
+}
+function niceTicks(max) {
+  if (max <= 0) return [0, 1];
+  const raw = max / 3;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || 10 * mag;
+  const ticks = [];
+  for (let v = 0; v <= max + step * 0.001; v += step) ticks.push(v);
+  if (ticks[ticks.length - 1] < max) ticks.push(ticks[ticks.length - 1] + step);
+  return ticks;
+}
+
+/* Robust date parsing: ISO, day-first, month-first (detected), Excel serial. */
+function parseDate(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && v > 20000 && v < 80000)
+    return new Date(Math.round((v - 25569) * 86400000));
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return mk(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/);
+  if (m) {
+    let [a, b, y] = [+m[1], +m[2], +m[3]];
+    if (y < 100) y += 2000;
+    if (a > 12 && b <= 12) return mk(y, b, a);      // day-first, unambiguous
+    if (b > 12 && a <= 12) return mk(y, a, b);      // month-first, unambiguous
+    return mk(y, b, a);                             // ambiguous → day-first (Ghana)
+  }
+  if (/^\d+(\.\d+)?$/.test(s)) return parseDate(parseFloat(s));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+  function mk(y, mo, d) {
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+}
+
+function normalise(raw) {
+  const d = parseDate(raw.date);
+  let cls = raw.classification;
+  if (cls == null || cls === "" || cls === 0 || cls === "0" || cls === "—" || cls === "-")
+    cls = "Unclassified";
+  let status = String(raw.status ?? "").trim();
+  if (!STATUS_META[status]) status = status ? status : "Approved";
+  return {
+    pv: String(raw.pv_number ?? "").trim(),
+    date: d,
+    fy: d ? d.getUTCFullYear() : null,
+    month: d ? d.getUTCMonth() : null,
+    payee: String(raw.payee ?? "").trim(),
+    desc: String(raw.description ?? "").trim(),
+    cls: String(cls),
+    gross: num(raw.gross_amount_ghs ?? raw.gross_ghs),
+    wht: num(raw.wht_amount),
+    whtType: String(raw.wht_type ?? "").trim(),
+    nhil: num(raw.nhil), getfund: num(raw.get_fund ?? raw.getfund), vat: num(raw.vat),
+    taxes: num(raw.total_taxes), invoice: num(raw.total_invoice), net: num(raw.net_payment),
+    method: String(raw.payment_method ?? "").trim(),
+    status: status,
+    preparedBy: String(raw.prepared_by ?? "").trim(),
+    doc: String(raw.supporting_document ?? "").trim()
+  };
+}
+
+/* ================= filtering ============================================= */
+function slice() {
+  const q = state.q.toLowerCase();
+  return rows.filter(r =>
+    (state.fy == null || r.fy === state.fy) &&
+    (state.month === "" || r.month === +state.month) &&
+    (state.status === "" || r.status === state.status) &&
+    (q === "" || r.pv.toLowerCase().includes(q) || r.payee.toLowerCase().includes(q)
+      || r.desc.toLowerCase().includes(q)));
+}
+function fySlice() { // FY-scoped, ignores month/search (for budget vs actuals)
+  return rows.filter(r => state.fy == null || r.fy === state.fy);
+}
+
+/* ================= tooltip =============================================== */
+const tip = $("#tip");
+function showTip(evt, valueText, labelText, extraText) {
+  tip.replaceChildren(
+    el("div", { class: "v", text: valueText }),
+    el("div", { text: labelText }),
+    extraText ? el("div", { text: extraText }) : null);
+  tip.style.display = "block";
+  moveTip(evt);
+}
+function moveTip(evt) {
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + w > innerWidth - 8) x = evt.clientX - w - pad;
+  if (y + h > innerHeight - 8) y = evt.clientY - h - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+function hoverable(node, getContent) {
+  node.addEventListener("pointerenter", e => { const c = getContent(); showTip(e, c[0], c[1], c[2]); });
+  node.addEventListener("pointermove", moveTip);
+  node.addEventListener("pointerleave", hideTip);
+  node.setAttribute("tabindex", "0");
+  node.addEventListener("focus", () => {
+    const r = node.getBoundingClientRect(), c = getContent();
+    showTip({ clientX: r.left + r.width / 2, clientY: r.top }, c[0], c[1], c[2]);
+  });
+  node.addEventListener("blur", hideTip);
+}
+
+/* ================= chart builders ======================================== */
+/* vertical column with rounded top (square baseline) */
+function colPath(x, y, w, h, r) {
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+/* horizontal bar with rounded right end */
+function barPath(x, y, w, h, r) {
+  r = Math.min(r, w, h / 2);
+  return `M${x},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x},${y + h} Z`;
+}
+
+function monthlyChart(container, data) {
+  container.replaceChildren();
+  const byMonth = Array.from({ length: 12 }, () => ({ gross: 0, count: 0 }));
+  let any = false;
+  for (const r of data) if (r.month != null) { byMonth[r.month].gross += r.gross; byMonth[r.month].count++; any = true; }
+  if (!any) { container.append(el("div", { class: "empty", text: "No PVs match the current filters." })); return; }
+
+  const W = 720, H = 230, mL = 52, mR = 10, mT = 14, mB = 26;
+  const plotW = W - mL - mR, plotH = H - mT - mB;
+  const max = Math.max(...byMonth.map(m => m.gross));
+  const ticks = niceTicks(max), top = ticks[ticks.length - 1];
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": "Column chart of gross GHS by month" });
+
+  for (const t of ticks) {
+    const y = mT + plotH - (t / top) * plotH;
+    svg.append(sv("line", { x1: mL, x2: W - mR, y1: y, y2: y, stroke: C.grid, "stroke-width": 1 }));
+    svg.append(sv("text", { x: mL - 7, y: y + 3.5, "text-anchor": "end", class: "axis-t", text: compact(t) }));
+  }
+  const slot = plotW / 12, bw = Math.min(24, slot - 8);
+  const maxIdx = byMonth.reduce((a, m, i) => m.gross > byMonth[a].gross ? i : a, 0);
+  const lastIdx = byMonth.reduce((a, m, i) => m.count > 0 ? i : a, -1);
+  const selMonth = state.month === "" ? null : +state.month;
+
+  byMonth.forEach((m, i) => {
+    const x = mL + i * slot + (slot - bw) / 2;
+    svg.append(sv("text", { x: mL + i * slot + slot / 2, y: H - 8, "text-anchor": "middle",
+      class: "axis-t", text: MONTHS[i] }));
+    if (m.gross <= 0) return;
+    const h = (m.gross / top) * plotH, y = mT + plotH - h;
+    const fill = selMonth == null ? C.mark : (i === selMonth ? C.mark : C.de);
+    const p = sv("path", { d: colPath(x, y, bw, h, 4), fill, class: "mark",
+      role: "img", "aria-label": `${MONTHS[i]}: GHS ${fmt(m.gross)} from ${m.count} PVs` });
+    hoverable(p, () => [`GHS ${fmt(m.gross)}`, `${MONTHS[i]} · ${m.count} PV${m.count === 1 ? "" : "s"}`,
+      `avg GHS ${fmt(m.gross / m.count)}`]);
+    p.addEventListener("pointerenter", () => p.setAttribute("opacity", "0.82"));
+    p.addEventListener("pointerleave", () => p.removeAttribute("opacity"));
+    svg.append(p);
+    if (i === maxIdx || i === lastIdx) // selective direct labels: peak + latest
+      svg.append(sv("text", { x: mL + i * slot + slot / 2, y: y - 5, "text-anchor": "middle",
+        class: "val-t", text: compact(m.gross) }));
+  });
+  container.append(svg);
+  container._tableData = {
+    cols: ["Month", "PVs", "Gross (GHS)"],
+    rows: byMonth.map((m, i) => [MONTHS[i], m.count, fmt(m.gross, 2)]).filter(r => r[1] > 0),
+    numCols: [1, 2]
+  };
+}
+
+function hbarChart(container, items, ariaLabel) {
+  // items: [{label, value, count, extra}] sorted desc
+  container.replaceChildren();
+  if (!items.length) { container.append(el("div", { class: "empty", text: "No PVs match the current filters." })); return; }
+  const rowH = 30, labelW = 190, valueW = 74, W = 560, mT = 4;
+  const H = mT + items.length * rowH + 4;
+  const plotW = W - labelW - valueW;
+  const max = Math.max(...items.map(d => d.value));
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": ariaLabel });
+  items.forEach((d, i) => {
+    const y = mT + i * rowH, bh = 18, by = y + (rowH - bh) / 2;
+    const w = Math.max(3, (d.value / max) * plotW);
+    const lbl = d.label.length > 26 ? d.label.slice(0, 25) + "…" : d.label;
+    svg.append(sv("text", { x: labelW - 8, y: y + rowH / 2 + 4, "text-anchor": "end",
+      class: "bar-label", text: lbl }));
+    const p = sv("path", { d: barPath(labelW, by, w, bh, 4), fill: C.mark, class: "mark",
+      role: "img", "aria-label": `${d.label}: GHS ${fmt(d.value)}` });
+    hoverable(p, () => [`GHS ${fmt(d.value)}`, d.label,
+      d.count != null ? `${d.count} PV${d.count === 1 ? "" : "s"}` : null]);
+    p.addEventListener("pointerenter", () => p.setAttribute("opacity", "0.82"));
+    p.addEventListener("pointerleave", () => p.removeAttribute("opacity"));
+    svg.append(p);
+    svg.append(sv("text", { x: labelW + w + 7, y: y + rowH / 2 + 4, class: "val-t", text: compact(d.value) }));
+  });
+  container.append(svg);
+  container._tableData = {
+    cols: ["", "PVs", "Gross (GHS)"],
+    rows: items.map(d => [d.label, d.count ?? "", fmt(d.value, 2)]),
+    numCols: [1, 2]
+  };
+}
+
+function statusCard(container, data) {
+  container.replaceChildren();
+  const agg = {};
+  for (const s in STATUS_META) agg[s] = { count: 0, gross: 0 };
+  for (const r of data) {
+    const a = agg[r.status] || (agg[r.status] = { count: 0, gross: 0 });
+    a.count++; a.gross += r.gross;
+  }
+  const total = data.reduce((a, r) => a + r.gross, 0);
+  if (!data.length) { container.append(el("div", { class: "empty", text: "No PVs match the current filters." })); return; }
+
+  const chips = el("div", { class: "statuschips" });
+  const bar = el("div", { class: "stackbar", role: "img", "aria-label": "Approval status share of gross GHS" });
+  const legend = el("div", { class: "legend" });
+  for (const s of Object.keys(agg)) {
+    const a = agg[s];
+    const meta = STATUS_META[s] || { color: C.de, icon: "•", cls: "na" };
+    chips.append(el("span", { class: "chip " + meta.cls },
+      el("span", { class: "dot", text: meta.icon }),
+      `${s}: ${a.count} · GHS ${compact(a.gross)}`));
+    if (a.gross > 0 && total > 0) {
+      const seg = el("div", { style: `background:${meta.color};flex:${a.gross} 0 0;` });
+      hoverable(seg, () => [`GHS ${fmt(a.gross)}`, `${s} · ${a.count} PVs`,
+        `${(a.gross / total * 100).toFixed(1)}% of gross`]);
+      bar.append(seg);
+      legend.append(el("span", { class: "key" },
+        el("span", { class: "sw", style: `background:${meta.color}` }),
+        `${s} ${(a.gross / total * 100).toFixed(1)}%`));
+    }
+  }
+  container.append(chips, bar, legend);
+}
+
+function taxTable(container, data) {
+  container.replaceChildren();
+  const whtBy = new Map();
+  let vat = 0, nhil = 0, getfund = 0, whtTotal = 0;
+  for (const r of data) {
+    vat += r.vat; nhil += r.nhil; getfund += r.getfund; whtTotal += r.wht;
+    if (r.wht > 0) {
+      const k = r.whtType || "WHT (type not set)";
+      whtBy.set(k, (whtBy.get(k) || 0) + r.wht);
+    }
+  }
+  const t = el("table", { class: "data" });
+  t.append(el("thead", {}, el("tr", {},
+    el("th", { text: "Tax / levy" }), el("th", { class: "num", text: "Amount (GHS)" }))));
+  const tb = el("tbody");
+  for (const [k, v] of [...whtBy.entries()].sort((a, b) => b[1] - a[1]))
+    tb.append(el("tr", {}, el("td", { text: "WHT — " + k }), el("td", { class: "num", text: fmt(v, 2) })));
+  tb.append(el("tr", {}, el("td", { text: "VAT (output on invoices)" }), el("td", { class: "num", text: fmt(vat, 2) })));
+  tb.append(el("tr", {}, el("td", { text: "NHIL 2.5%" }), el("td", { class: "num", text: fmt(nhil, 2) })));
+  tb.append(el("tr", {}, el("td", { text: "GETFund 2.5%" }), el("td", { class: "num", text: fmt(getfund, 2) })));
+  t.append(tb);
+  t.append(el("tfoot", {}, el("tr", {},
+    el("td", { text: "Total WHT payable to GRA" }),
+    el("td", { class: "num", text: fmt(whtTotal, 2) }))));
+  container.append(t);
+}
+
+function bvaTable(container, fyData) {
+  container.replaceChildren();
+  const budgets = EMBEDDED.budgets || {};
+  const agg = {};
+  for (const r of fyData) {
+    const a = agg[r.cls] || (agg[r.cls] = { actual: 0, committed: 0 });
+    if (r.status === "Pending") a.committed += r.gross;
+    else if (r.status === "Approved") a.actual += r.gross;
+  }
+  const names = [...new Set([...Object.keys(budgets), ...Object.keys(agg)])]
+    .filter(n => (budgets[n] || 0) > 0 || agg[n])
+    .sort((a, b) => (budgets[b] || 0) - (budgets[a] || 0));
+  if (!names.length) { container.append(el("div", { class: "empty", text: "No budget data." })); return; }
+
+  const t = el("table", { class: "data" });
+  t.append(el("thead", {}, el("tr", {},
+    el("th", { text: "Classification" }), el("th", { class: "num", text: "Budget" }),
+    el("th", { class: "num", text: "Actuals" }), el("th", { class: "num", text: "Committed" }),
+    el("th", { class: "num", text: "Remaining" }), el("th", { text: "% used" }), el("th", { text: "Status" }))));
+  const tb = el("tbody");
+  let tB = 0, tA = 0, tC = 0;
+  for (const n of names) {
+    const b = budgets[n] || 0, a = agg[n]?.actual || 0, c = agg[n]?.committed || 0;
+    tB += b; tA += a; tC += c;
+    const used = b > 0 ? (a + c) / b : null;
+    let chip, fill;
+    if (used == null) { chip = el("span", { class: "chip na", text: "No budget" }); fill = C.muted; }
+    else if (used > 0.95) { chip = mkChip("bad", "■", "Over / at limit"); fill = C.bad; }
+    else if (used > 0.70) { chip = mkChip("warn", "▲", "Watch"); fill = "#B98A00"; }
+    else { chip = mkChip("ok", "●", "On track"); fill = C.ok; }
+    const meter = el("div", { class: "meter", role: "img",
+      "aria-label": used == null ? "no budget" : `${Math.round(used * 100)}% of budget used` },
+      el("i", { style: `width:${used == null ? 0 : Math.min(100, used * 100)}%;background:${fill}` }));
+    const pct = el("div", { style: "display:flex;align-items:center;gap:8px" },
+      meter, el("span", { class: "val-t", style: "font-size:11.5px;color:var(--ink-2)",
+        text: used == null ? "—" : (used * 100).toFixed(used >= 1 ? 0 : 1) + "%" }));
+    tb.append(el("tr", {},
+      el("td", { text: n }), el("td", { class: "num", text: b ? fmt(b) : "—" }),
+      el("td", { class: "num", text: fmt(a) }), el("td", { class: "num", text: fmt(c) }),
+      el("td", { class: "num", text: b ? fmt(b - a - c) : "—" }),
+      el("td", {}, pct), el("td", {}, chip)));
+  }
+  t.append(tb);
+  t.append(el("tfoot", {}, el("tr", {},
+    el("td", { text: "Total (budgeted lines)" }), el("td", { class: "num", text: fmt(tB) }),
+    el("td", { class: "num", text: fmt(tA) }), el("td", { class: "num", text: fmt(tC) }),
+    el("td", { class: "num", text: fmt(tB - tA - tC) }), el("td"), el("td"))));
+  container.append(t);
+  function mkChip(cls, icon, label) {
+    return el("span", { class: "chip " + cls }, el("span", { class: "dot", text: icon }), label);
+  }
+}
+
+function registerTable(container, data) {
+  container.replaceChildren();
+  if (!data.length) { container.append(el("div", { class: "empty", text: "No PVs match the current filters." })); return; }
+  const t = el("table", { class: "data" });
+  t.append(el("thead", {}, el("tr", {},
+    ...["PV number", "Date", "Payee", "Description", "Classification"].map(h => el("th", { text: h })),
+    ...["Gross (GHS)", "Taxes (GHS)", "Net (GHS)"].map(h => el("th", { class: "num", text: h })),
+    el("th", { text: "Status" }), el("th", { text: "Docs" }))));
+  const tb = el("tbody");
+  const sorted = [...data].sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+  for (const r of sorted) {
+    const meta = STATUS_META[r.status];
+    const docCell = el("td");
+    if (r.doc && /^https?:\/\//i.test(r.doc)) {
+      const a = el("a", { href: r.doc, target: "_blank", rel: "noopener noreferrer",
+        title: "Open supporting-document folder", text: "📁 open" });
+      a.style.color = "var(--pf-turquoise)";
+      docCell.append(a);
+    } else docCell.append(el("span", { style: "color:var(--muted)", text: "—" }));
+    tb.append(el("tr", {},
+      el("td", { text: r.pv }),
+      el("td", { text: r.date ? r.date.toISOString().slice(0, 10) : "—" }),
+      el("td", { text: r.payee }),
+      el("td", { text: r.desc.length > 60 ? r.desc.slice(0, 59) + "…" : r.desc, title: r.desc }),
+      el("td", { text: r.cls }),
+      el("td", { class: "num", text: fmt(r.gross, 2) }),
+      el("td", { class: "num", text: fmt(r.taxes, 2) }),
+      el("td", { class: "num", text: fmt(r.net, 2) }),
+      el("td", {}, meta
+        ? el("span", { class: "chip " + meta.cls }, el("span", { class: "dot", text: meta.icon }), r.status)
+        : el("span", { class: "chip na", text: r.status || "—" })),
+      docCell));
+  }
+  t.append(tb);
+  container.append(t);
+}
+
+/* generic table view for chart toggles */
+function renderMiniTable(container, td) {
+  container.replaceChildren();
+  const t = el("table", { class: "data" });
+  t.append(el("thead", {}, el("tr", {},
+    ...td.cols.map((c, i) => el("th", { class: td.numCols.includes(i) ? "num" : "", text: c })))));
+  const tb = el("tbody");
+  for (const r of td.rows)
+    tb.append(el("tr", {}, ...r.map((v, i) =>
+      el("td", { class: td.numCols.includes(i) ? "num" : "", text: String(v) }))));
+  t.append(tb);
+  container.append(t);
+}
+
+/* ================= KPI tiles ============================================= */
+function kpis(container, data) {
+  container.replaceChildren();
+  const count = data.length;
+  const gross = data.reduce((a, r) => a + r.gross, 0);
+  const net = data.reduce((a, r) => a + r.net, 0);
+  const taxes = data.reduce((a, r) => a + r.taxes, 0);
+  const whtT = data.reduce((a, r) => a + r.wht, 0);
+
+  // context note: vs previous month when a single month is selected
+  let note = periodLabel();
+  let dir = null;
+  if (state.month !== "" && state.fy != null) {
+    const m = +state.month;
+    const prev = rows.filter(r => (m === 0 ? r.fy === state.fy - 1 && r.month === 11
+      : r.fy === state.fy && r.month === m - 1) &&
+      (state.status === "" || r.status === state.status));
+    const pg = prev.reduce((a, r) => a + r.gross, 0);
+    if (pg > 0) {
+      const d = (gross - pg) / pg * 100;
+      dir = d >= 0 ? "up" : "down";
+      note = `${d >= 0 ? "▲" : "▼"} ${Math.abs(d).toFixed(0)}% vs ${MONTHS[m === 0 ? 11 : m - 1]} gross`;
+    }
+  }
+
+  // sparkline data: monthly gross of the selected FY
+  const monthly = Array.from({ length: 12 }, () => 0);
+  for (const r of fySlice()) if (r.month != null &&
+    (state.status === "" || r.status === state.status)) monthly[r.month] += r.gross;
+
+  container.append(
+    tile("Payment vouchers", fmt(count), periodLabel()),
+    tileSpark("Gross spend (GHS)", compact(gross), note, dir, monthly),
+    tile("Net paid to payees (GHS)", compact(net), "after withholding tax"),
+    tile("Taxes & levies (GHS)", compact(taxes), `incl. WHT ${compact(whtT)} withheld for GRA`));
+
+  function tile(label, value, noteText) {
+    return el("div", { class: "tile" },
+      el("div", {}, el("div", { class: "label", text: label }),
+        el("div", { class: "value", text: value }),
+        el("div", { class: "note", text: noteText })));
+  }
+  function tileSpark(label, value, noteText, dirCls, series) {
+    const left = el("div", {}, el("div", { class: "label", text: label }),
+      el("div", { class: "value", text: value }));
+    const noteEl = el("div", { class: "note" });
+    if (dirCls) noteEl.append(el("span", { class: dirCls, text: noteText }));
+    else noteEl.append(noteText);
+    left.append(noteEl);
+    const w = 84, h = 30, max = Math.max(...series, 1);
+    const pts = series.map((v, i) => `${(i / 11) * (w - 6) + 3},${h - 4 - (v / max) * (h - 10)}`);
+    const spark = sv("svg", { class: "spark", width: w, height: h, viewBox: `0 0 ${w} ${h}`,
+      "aria-label": "monthly gross trend" });
+    spark.append(sv("polyline", { points: pts.join(" "), fill: "none", stroke: C.de, "stroke-width": 2,
+      "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const lastIdx = series.reduce((a, v, i) => v > 0 ? i : a, 0);
+    const [lx, ly] = pts[lastIdx].split(",");
+    spark.append(sv("circle", { cx: lx, cy: ly, r: 4, fill: C.mark, stroke: "#fff", "stroke-width": 2 }));
+    return el("div", { class: "tile" }, left, spark);
+  }
+}
+
+function periodLabel() {
+  if (state.fy == null) return "all years";
+  return (state.month === "" ? `FY${state.fy} · all months` : `${MONTHS[+state.month]} ${state.fy}`) +
+    (state.status ? ` · ${state.status}` : "");
+}
+
+/* ================= render ================================================ */
+function render() {
+  const data = slice();
+  $("#asof-period").textContent = periodLabel();
+  $("#asof-src").textContent = sourceLabel;
+  kpis($("#kpis"), data);
+
+  const mSub = state.month === "" ? "All PVs in the selected year — hover a column for detail"
+    : `Selected month highlighted — other months shown for context`;
+  $("#c-month-sub").textContent = mSub;
+  const monthData = rows.filter(r => (state.fy == null || r.fy === state.fy) &&
+    (state.status === "" || r.status === state.status) &&
+    (state.q === "" || r.pv.toLowerCase().includes(state.q.toLowerCase()) ||
+      r.payee.toLowerCase().includes(state.q.toLowerCase()) ||
+      r.desc.toLowerCase().includes(state.q.toLowerCase())));
+  monthlyChart($("#c-month"), monthData);
+
+  statusCard($("#c-status"), data);
+
+  const byCls = {};
+  for (const r of data) {
+    const a = byCls[r.cls] || (byCls[r.cls] = { value: 0, count: 0 });
+    a.value += r.gross; a.count++;
+  }
+  hbarChart($("#c-class"),
+    Object.entries(byCls).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.value - a.value),
+    "Horizontal bar chart of gross GHS by classification");
+
+  const byPayee = {};
+  for (const r of data) {
+    const a = byPayee[r.payee || "(no payee)"] || (byPayee[r.payee || "(no payee)"] = { value: 0, count: 0 });
+    a.value += r.gross; a.count++;
+  }
+  hbarChart($("#c-payee"),
+    Object.entries(byPayee).map(([label, v]) => ({ label, ...v }))
+      .sort((a, b) => b.value - a.value).slice(0, 8),
+    "Horizontal bar chart of gross GHS for the top payees");
+
+  taxTable($("#c-tax"), data);
+  $("#bva-fy").textContent = state.fy ?? "";
+  bvaTable($("#c-bva"), fySlice());
+  $("#c-reg-sub").textContent = `${data.length} PV${data.length === 1 ? "" : "s"} · ${periodLabel()}` +
+    ` · gross GHS ${fmt(data.reduce((a, r) => a + r.gross, 0), 2)}`;
+  registerTable($("#c-register"), data);
+
+  // restore any open table toggles to chart view on re-render
+  document.querySelectorAll(".tbl-toggle").forEach(b => { b.textContent = "⊞ table"; b._table = false; });
+}
+
+/* ================= filters & data loading ================================ */
+function initFilters() {
+  const fys = [...new Set(rows.map(r => r.fy).filter(v => v != null))].sort();
+  const fySel = $("#f-fy");
+  fySel.replaceChildren(el("option", { value: "", text: "All" }),
+    ...fys.map(y => el("option", { value: y, text: "FY" + y })));
+  state.fy = fys.length ? fys[fys.length - 1] : null;
+  fySel.value = state.fy ?? "";
+
+  const mSel = $("#f-month");
+  mSel.replaceChildren(el("option", { value: "", text: "All" }),
+    ...MONTHS.map((m, i) => el("option", { value: i, text: m })));
+  mSel.value = "";
+}
+
+function attachEvents() {
+  $("#f-fy").addEventListener("change", e => { state.fy = e.target.value === "" ? null : +e.target.value; render(); });
+  $("#f-month").addEventListener("change", e => { state.month = e.target.value; render(); });
+  $("#f-status").addEventListener("change", e => { state.status = e.target.value; render(); });
+  $("#f-q").addEventListener("input", e => { state.q = e.target.value.trim(); render(); });
+
+  document.querySelectorAll(".tbl-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const box = document.getElementById(btn.dataset.for);
+      if (!btn._table) {
+        if (!box._tableData) return;
+        box._chartNodes = [...box.childNodes];
+        renderMiniTable(box, box._tableData);
+        btn.textContent = "📊 chart"; btn._table = true;
+      } else {
+        box.replaceChildren(...(box._chartNodes || []));
+        btn.textContent = "⊞ table"; btn._table = false;
+      }
+    });
+  });
+
+  $("#load-btn").addEventListener("click", () => $("#load-input").click());
+  $("#load-input").addEventListener("change", e => {
+    if (e.target.files[0]) loadCsvFile(e.target.files[0]);
+    e.target.value = "";
+  });
+  let dragDepth = 0;
+  document.addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); });
+  document.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+  document.addEventListener("dragover", e => e.preventDefault());
+  document.addEventListener("drop", e => {
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging");
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadCsvFile(f);
+  });
+}
+
+function parseCsv(text) {
+  const out = [];
+  let row = [], field = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ",") { row.push(field); field = ""; }
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some(c => c !== "")) out.push(row);
+      row = [];
+    } else field += ch;
+  }
+  row.push(field);
+  if (row.some(c => c !== "")) out.push(row);
+  return out;
+}
+
+function loadCsvFile(file) {
+  document.querySelector(".shell").classList.add("loading");
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const grid = parseCsv(String(reader.result).replace(/^\uFEFF/, ""));
+      if (!grid.length) throw new Error("The file is empty.");
+      const headers = grid[0].map(h => h.trim().toLowerCase().replace(/\s+/g, "_"));
+      if (!headers.includes("pv_number"))
+        throw new Error("No 'pv_number' column found — export the 📤 Dashboard Extract sheet, not the register.");
+      const recs = [];
+      for (let i = 1; i < grid.length; i++) {
+        const o = {};
+        headers.forEach((h, j) => o[h] = grid[i][j]);
+        if (String(o.pv_number ?? "").trim() !== "") recs.push(o);
+      }
+      if (!recs.length) throw new Error("No PV rows found in the file.");
+      rows = recs.map(normalise);
+      sourceLabel = `${file.name} · ${rows.length} PVs · loaded ${new Date().toLocaleDateString("en-GB")}`;
+      initFilters(); render();
+    } catch (err) {
+      alert("Could not load that file:\n" + err.message);
+    } finally {
+      document.querySelector(".shell").classList.remove("loading");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ================= boot ================================================== */
+rows = EMBEDDED.pvs.map(normalise);
+sourceLabel = `embedded snapshot · ${rows.length} PVs · generated ${EMBEDDED.generated}`;
+initFilters();
+attachEvents();
+render();
+</script>
+</body>
+</html>
